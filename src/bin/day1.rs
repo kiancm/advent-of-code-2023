@@ -1,14 +1,8 @@
-use std::{
-    collections::{HashMap, HashSet},
-    fs,
-    path::PathBuf,
-};
+use std::collections::{HashMap, HashSet};
+use advent_of_code_2023::{read_input, Day};
 
 fn main() -> std::io::Result<()> {
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push("data/day1/input.txt");
-
-    let input = fs::read_to_string(path)?;
+    let input = read_input(Day::DAY1)?;
 
     let digit_spellings = HashMap::from([
         ("one", "1".to_string()),
