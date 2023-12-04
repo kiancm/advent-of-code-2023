@@ -6,7 +6,8 @@ use strum::{EnumString, Display};
 #[strum(serialize_all = "snake_case")]
 pub enum Day {
     DAY1,
-    DAY2
+    DAY2,
+    DAY3
 }
 
 pub fn read_input(day: Day) -> std::io::Result<String> {
