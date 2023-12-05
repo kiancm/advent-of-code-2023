@@ -47,7 +47,14 @@ fn get_nums(input: &String) -> Vec<PointValue> {
                 num_builder.clear();
             }
         }
-        num_builder.clear();
+        if let Ok(num) = num_builder.parse() {
+            nums.push(PointValue {
+                value: num,
+                start: (i, line.len() - num_builder.len()),
+                len: num_builder.len(),
+            });
+            num_builder.clear();
+        }
     }
     nums
 }
@@ -89,7 +96,7 @@ fn is_part(n: &PointValue, symbol_locations: &HashSet<(usize, usize)>) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::{get_nums, get_symbol_locations, PointValue, part1};
+    use crate::{get_nums, get_symbol_locations, part1, PointValue};
 
     #[test]
     fn test_parsing() {
@@ -142,15 +149,39 @@ mod tests {
     }
 
     #[test]
-    fn test_edges() {
+    fn test_extra_valid() {
         let input = r#"
-            ...123...
-            234.$.345
-            ...456...
+            ..@@@@@..
+            ..@123@..
+            ..@@@@@..
         "#
         .replace(" ", "")
         .to_string();
-        test_valid_parts(input, 123 + 456);
+        test_valid_parts(input, 123);
+    }
+
+    #[test]
+    fn test_taha() {
+        let input = r#"
+            .........
+            ...123...
+            ......@..
+        "#
+        .replace(" ", "")
+        .to_string();
+        test_valid_parts(input, 123);
+    }
+
+    #[test]
+    fn test_edges() {
+        let input = r#"
+            ...123..@
+            234.$.345
+            @..456...
+        "#
+        .replace(" ", "")
+        .to_string();
+        test_valid_parts(input, 123 + 234 + 345 + 456);
     }
 
     #[test]
