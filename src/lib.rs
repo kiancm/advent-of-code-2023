@@ -8,7 +8,8 @@ pub enum Day {
     DAY1,
     DAY2,
     DAY3,
-    DAY5
+    DAY4,
+    DAY5,
 }
 
 pub fn read_input(day: Day) -> std::io::Result<String> {
