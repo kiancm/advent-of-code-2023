@@ -120,13 +120,13 @@ fn is_part(n: &PointValue, symbol_locations: &HashSet<(usize, usize)>) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::{get_nums, get_symbol_locations, part1, PointValue};
+    use crate::{get_nums, get_symbol_locations, part1, PointValue, is_symbol};
 
     #[test]
     fn test_parsing() {
         let input = "....769*148....".to_string();
         let nums = get_nums(&input);
-        let symbol_locations = get_symbol_locations(&input);
+        let symbol_locations = get_symbol_locations(&input, is_symbol);
 
         let expected_nums = vec![
             PointValue {
@@ -242,7 +242,7 @@ mod tests {
     }
 
     fn test_valid_parts(input: String, sum: i32) {
-        let actual = part1(input);
+        let actual = part1(&input);
         assert_eq!(sum, actual, "expected: {} != actual: {}", sum, actual);
     }
 }
