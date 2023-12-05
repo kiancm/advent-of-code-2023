@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use advent_of_code_2023::{read_input, Day};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 struct PointValue {
     value: i32,
     start: (usize, usize),
@@ -12,15 +12,34 @@ struct PointValue {
 fn main() -> std::io::Result<()> {
     let input = read_input(Day::DAY3)?;
 
-    println!("Part ID Sum: {}", part1(input));
+    println!("Part 1: {}", part1(&input));
+    println!("Part 2: {}", part2(&input));
 
     Ok(())
 }
 
-fn part1(input: String) -> i32 {
-    let symbol_locations: HashSet<(usize, usize)> = get_symbol_locations(&input);
+fn part1(input: &String) -> i32 {
+    let symbol_locations: HashSet<(usize, usize)> = get_symbol_locations(&input, is_symbol);
     let nums = get_nums(&input);
     sum_part_ids(nums, &symbol_locations)
+}
+
+fn part2(input: &String) -> i32 {
+    let symbol_locations: HashSet<(usize, usize)> =
+        get_symbol_locations(&input, |char| char.to_owned() == '*');
+    let nums = get_nums(&input);
+    symbol_locations
+        .iter()
+        .filter_map(|(x, y)| {
+            Some(
+                nums.iter()
+                    .filter(|n| get_neighbors(n).contains(&(*x as isize, *y as isize)))
+                    .collect::<Vec<_>>(),
+            )
+            .filter(|it| it.len() == 2)
+        })
+        .map(|it| it.iter().map(|pv| pv.value).product::<i32>())
+        .sum()
 }
 
 fn sum_part_ids(nums: Vec<PointValue>, symbol_locations: &HashSet<(usize, usize)>) -> i32 {
@@ -59,7 +78,10 @@ fn get_nums(input: &String) -> Vec<PointValue> {
     nums
 }
 
-fn get_symbol_locations(input: &String) -> HashSet<(usize, usize)> {
+fn get_symbol_locations(
+    input: &String,
+    is_symbol: impl Fn(&char) -> bool,
+) -> HashSet<(usize, usize)> {
     input
         .lines()
         .enumerate()
@@ -73,23 +95,25 @@ fn is_symbol(char: &char) -> bool {
     !char.is_numeric() && char.to_owned() != '.'
 }
 
-fn is_part(n: &PointValue, symbol_locations: &HashSet<(usize, usize)>) -> bool {
-    let (x, y) = n.start;
+fn get_neighbors(point_value: &PointValue) -> HashSet<(isize, isize)> {
+    let (x, y) = point_value.start;
     let x = x as isize;
     let y = y as isize;
-    let len: isize = n.len as isize;
+    let len: isize = point_value.len as isize;
 
     let top: Vec<(isize, isize)> = (y - 1..y + len + 1).map(|y| (x - 1, y)).collect();
     let middle: Vec<(isize, isize)> = vec![(x, y - 1), (x, y + len)];
     let bottom: Vec<(isize, isize)> = (y - 1..y + len + 1).map(|y| (x + 1, y)).collect();
 
-    let adj = top
-        .iter()
-        .chain(middle.iter())
-        .chain(bottom.iter())
-        .collect::<Vec<_>>();
+    top.into_iter()
+        .chain(middle.into_iter())
+        .chain(bottom.into_iter())
+        .collect()
+}
 
-    adj.iter()
+fn is_part(n: &PointValue, symbol_locations: &HashSet<(usize, usize)>) -> bool {
+    get_neighbors(n)
+        .iter()
         .map(|(x, y)| (*x as usize, *y as usize))
         .any(|point| symbol_locations.contains(&point))
 }
