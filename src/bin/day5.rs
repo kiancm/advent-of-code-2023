@@ -94,10 +94,6 @@ fn parse_range(line: &str) -> Range {
     }
 }
 
-fn create_regex(s: &str) -> Regex {
-    Regex::new(&format!(r#"{} map:\n([0-9 ]+\n)+"#, s)).unwrap()
-}
-
 #[cfg(test)]
 mod tests {
     use crate::part1;
