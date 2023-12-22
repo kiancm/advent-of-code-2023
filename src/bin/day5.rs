@@ -2,12 +2,12 @@ use advent_of_code_2023::{read_input, Day};
 use regex::Regex;
 
 struct Range {
-    input: u32,
-    output: u32,
-    len: u32,
+    input: u64,
+    output: u64,
+    len: u64,
 }
 impl Range {
-    fn get(&self, num: u32) -> Option<u32> {
+    fn get(&self, num: u64) -> Option<u64> {
         if self.input <= num && num < self.input + self.len {
             Some(self.output + (num - self.input))
         } else {
@@ -20,7 +20,7 @@ struct Map {
     ranges: Vec<Range>,
 }
 impl Map {
-    fn map(&self, seed: u32) -> u32 {
+    fn map(&self, seed: u64) -> u64 {
         self.ranges
             .iter()
             .find_map(|range| range.get(seed))
@@ -30,7 +30,7 @@ impl Map {
 
 struct Maps(Vec<Map>);
 impl Maps {
-    fn map(&self, seed: u32) -> u32 {
+    fn map(&self, seed: u64) -> u64 {
         self.0
             .iter()
             .map(|map| |n| map.map(n))
@@ -46,14 +46,14 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn part1(input: &String) -> u32 {
+fn part1(input: &String) -> u64 {
     let seeds = parse_seeds(&input);
     let maps = parse_maps(&input);
 
     seeds.into_iter().map(|seed| maps.map(seed)).min().unwrap()
 }
 
-fn parse_seeds(input: &str) -> Vec<u32> {
+fn parse_seeds(input: &str) -> Vec<u64> {
     let re = Regex::new(r"seeds: ([0-9 ]+)").unwrap();
     let captures = re.captures(&input).unwrap();
     let nums = captures.get(1).map(|m| m.as_str()).unwrap();
