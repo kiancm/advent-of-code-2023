@@ -62,24 +62,11 @@ fn parse_seeds(input: &str) -> Vec<u32> {
 }
 
 fn parse_maps(input: &str) -> Maps {
-    // let maps = [
-    //     "seed-to-soil",
-    //     "soil-to-fertilizer",
-    //     "fertilizer-to-water",
-    //     "water-to-light",
-    //     "light-to-temperature",
-    //     "temperature-to-humidity",
-    //     "humidity-to-location",
-    // ]
     let maps =
-    Regex::new(r"map:\n([0-9 ]+\n)+").unwrap()
-    .captures(&input)
-    .iter()
-    // .map(|s| create_regex(s))
-    // .map(|re| re.captures(&input).unwrap())
-    .flat_map(|cs| cs.iter())
-    .map(|m| m.unwrap().as_str())
-    .map(|raw| parse_map(raw))
+    Regex::new(r"\n([0-9 ]+\n)+").unwrap()
+    .find_iter(&input)
+    .map(|m| m.as_str())
+    .map(|raw|  parse_map(raw))
     .collect();
 
     Maps(maps)
@@ -87,6 +74,7 @@ fn parse_maps(input: &str) -> Maps {
 
 fn parse_map(raw: &str) -> Map {
     let ranges = raw
+        .trim()
         .lines()
         .map(|line| line.trim())
         .map(|line| parse_range(line))
