@@ -30,22 +30,25 @@ impl Range {
             }
             Overlap {
                 inside: vec![(self.input, end - self.input + 1)],
-                outside
+                outside,
             }
         } else if start >= self.input && end <= self.input_end() {
             Overlap {
                 inside: vec![range],
-                outside: vec![]
+                outside: vec![],
             }
         } else if start < self.input && self.input_end() < end {
             Overlap {
                 inside: vec![(self.input, self.len)],
-                outside: vec![(start, self.input - start), (self.input_end() + 1, end - self.input_end())]
+                outside: vec![
+                    (start, self.input - start),
+                    (self.input_end() + 1, end - self.input_end()),
+                ],
             }
         } else if start <= self.input_end() && self.input_end() < end {
             Overlap {
                 inside: vec![(start, self.input_end() - start + 1)],
-                outside: vec![(self.input_end() + 1, end - self.input_end())]
+                outside: vec![(self.input_end() + 1, end - self.input_end())],
             }
         } else {
             Overlap {
@@ -82,14 +85,7 @@ impl Map {
                         .into_iter()
                         .map(|r| range.get_overlap(r))
                         .fold((vec![], vec![]), |(m, o), ov| {
-                            (
-                                [ov.inside.into_iter().collect_vec(), m].concat(),
-                                [
-                                    ov.outside.into_iter().collect_vec(),
-                                    o,
-                                ]
-                                .concat(),
-                            )
+                            ([ov.inside, m].concat(), [ov.outside, o].concat())
                         });
                     (
                         [
@@ -117,14 +113,12 @@ impl Maps {
     }
 
     fn map_range(&self, range: (u64, u64)) -> Vec<(u64, u64)> {
-        self.0
-            .iter()
-            .fold(vec![range], |ranges, map| {
-                ranges
-                    .into_iter()
-                    .flat_map(|range| map.map_range(range))
-                    .collect()
-            })
+        self.0.iter().fold(vec![range], |ranges, map| {
+            ranges
+                .into_iter()
+                .flat_map(|range| map.map_range(range))
+                .collect()
+        })
     }
 }
 
@@ -151,7 +145,7 @@ fn part2(input: &String) -> u64 {
     let seed_ranges: Vec<(u64, u64)> = seeds
         .iter()
         .enumerate()
-        .group_by(|(i, s)| i / 2)
+        .group_by(|(i, _)| i / 2)
         .into_iter()
         .map(|(_, group)| group.collect::<Vec<_>>())
         .map(|group| (*group[0].1, *group[1].1))
@@ -208,7 +202,7 @@ fn parse_range(line: &str) -> Range {
 
 #[cfg(test)]
 mod tests {
-    use crate::{part1, part2, Range, Overlap};
+    use crate::{part1, part2, Overlap, Range};
 
     #[test]
     fn test_example() {
@@ -256,19 +250,39 @@ mod tests {
 
     #[test]
     fn test_overlap() {
-    // 1 5   3 5 2 -> { 1 2, 3 2, 5 1}
-    // 1 3   3 5 2 -> { 1 2, 3 1, None}
+        let range = Range {
+            input: 3,
+            output: 5,
+            len: 2,
+        };
 
-    // a b c d
-    // c d a b
-    // a c b d
-    // c a b d
-    // c a d b
-    let range = Range { input: 3, output: 5, len: 2};
-
-    assert_eq!(Overlap { inside: vec![(3, 2)], outside: vec![(1, 2), (5, 1)]}, range.get_overlap((1, 5)));
-    assert_eq!(Overlap { inside: vec![(3, 1)], outside: vec![(1, 2)]}, range.get_overlap((1, 3)));
-    assert_eq!(Overlap { inside: vec![(4, 1)], outside: vec![(5, 1)]}, range.get_overlap((4, 2)));
-    assert_eq!(Overlap { inside: vec![], outside: vec![(1, 2)]}, range.get_overlap((1, 2)));
-}
+        assert_eq!(
+            Overlap {
+                inside: vec![(3, 2)],
+                outside: vec![(1, 2), (5, 1)]
+            },
+            range.get_overlap((1, 5))
+        );
+        assert_eq!(
+            Overlap {
+                inside: vec![(3, 1)],
+                outside: vec![(1, 2)]
+            },
+            range.get_overlap((1, 3))
+        );
+        assert_eq!(
+            Overlap {
+                inside: vec![(4, 1)],
+                outside: vec![(5, 1)]
+            },
+            range.get_overlap((4, 2))
+        );
+        assert_eq!(
+            Overlap {
+                inside: vec![],
+                outside: vec![(1, 2)]
+            },
+            range.get_overlap((1, 2))
+        );
+    }
 }
