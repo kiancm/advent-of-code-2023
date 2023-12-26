@@ -30,7 +30,12 @@ fn part1(input: &str) -> Option<u64> {
     get_path_length(START_KEY, &instructions, &map, |key| key == END_KEY)
 }
 
-fn get_path_length(start_key: &str, instructions: &Vec<Instruction>, map: &HashMap<&str, (&str, &str)>, predicate: impl Fn(&str) -> bool) -> Option<u64> {
+fn get_path_length(
+    start_key: &str,
+    instructions: &Vec<Instruction>,
+    map: &HashMap<&str, (&str, &str)>,
+    predicate: impl Fn(&str) -> bool,
+) -> Option<u64> {
     let instructions = repeat_with(|| instructions).into_iter().flatten();
     let mut key = start_key;
     for (i, ins) in (1u64..).zip(instructions) {
@@ -50,15 +55,12 @@ fn get_path_length(start_key: &str, instructions: &Vec<Instruction>, map: &HashM
 fn part2(input: &str) -> u64 {
     let instructions = parse_instructions(input);
     let map = parse_map(input);
-    let keys = map
-        .keys()
+
+    map.keys()
         .cloned()
         .filter(|key| key.ends_with("A"))
-        .collect_vec();
-    keys
-    .iter()
-    .map(|key| get_path_length(key, &instructions, &map, |key| key.ends_with("Z")).unwrap())
-    .fold(1, |a, b| lcm(a, b))
+        .map(|key| get_path_length(key, &instructions, &map, |key| key.ends_with("Z")).unwrap())
+        .fold(1, |a, b| lcm(a, b))
 }
 
 fn lcm(a: u64, b: u64) -> u64 {
