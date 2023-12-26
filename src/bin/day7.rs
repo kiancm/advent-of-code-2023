@@ -1,11 +1,11 @@
-use std::{cmp::Ordering, convert::identity, str::FromStr};
+use std::{cmp::Ordering, convert::identity, hash::Hash, iter::zip, str::FromStr};
 
 use advent_of_code_2023::{read_input, Day};
 use itertools::Itertools;
 use regex::Regex;
-use strum::EnumString;
+use strum::{Display, EnumString};
 
-#[derive(EnumString, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(EnumString, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Display)]
 enum Card {
     #[strum(serialize = "2")]
     TWO,
@@ -35,7 +35,22 @@ enum Card {
     ACE,
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+impl Card {
+    fn cmp_part1(&self, other: &Self) -> Ordering {
+        self.cmp(&other)
+    }
+
+    fn cmp_part2(&self, other: &Self) -> Ordering {
+        match (&self, &other) {
+            (Card::JACK, Card::JACK) => Ordering::Equal,
+            (Card::JACK, _) => Ordering::Less,
+            (_, Card::JACK) => Ordering::Greater,
+            (_, _) => self.cmp(&other),
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
 enum HandType {
     HighCard,
     Pair,
@@ -49,7 +64,7 @@ enum HandType {
 #[derive(Debug)]
 struct ParseCardsError;
 
-#[derive(PartialEq, Eq)]
+#[derive(Clone)]
 struct Cards(Vec<Card>);
 impl FromIterator<Card> for Cards {
     fn from_iter<T: IntoIterator<Item = Card>>(iter: T) -> Self {
@@ -66,15 +81,15 @@ impl FromStr for Cards {
             .map_err(|_| ParseCardsError)
     }
 }
-impl PartialOrd for Cards {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
+impl std::fmt::Display for Cards {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0.iter().map(|card| card.to_string()).join(""))
     }
 }
-impl Ord for Cards {
-    fn cmp(&self, other: &Self) -> Ordering {
+impl Cards {
+    fn cmp(&self, other: &Self, card_cmp: impl Fn(&Card, &Card) -> Ordering) -> Ordering {
         for (c1, c2) in self.0.iter().zip(other.0.iter()) {
-            match c1.cmp(c2) {
+            match card_cmp(c1, c2) {
                 Ordering::Greater => return Ordering::Greater,
                 Ordering::Less => return Ordering::Less,
                 _ => {}
@@ -82,9 +97,7 @@ impl Ord for Cards {
         }
         Ordering::Equal
     }
-}
-impl Cards {
-    fn compute_hand_type(&self) -> HandType {
+    fn compute_hand_type_part1(&self) -> HandType {
         if self.is_five_of_a_kind() {
             HandType::FiveOfAKind
         } else if self.is_four_of_a_kind() {
@@ -96,6 +109,24 @@ impl Cards {
         } else if self.is_two_pair() {
             HandType::TwoPair
         } else if self.is_pair() {
+            HandType::Pair
+        } else {
+            HandType::HighCard
+        }
+    }
+
+    fn compute_hand_type_part2(&self) -> HandType {
+        if self.is_five_of_a_kind_j() {
+            HandType::FiveOfAKind
+        } else if self.is_four_of_a_kind_j() {
+            HandType::FourOfAKind
+        } else if self.is_full_house_j() {
+            HandType::FullHouse
+        } else if self.is_three_of_a_kind_j() {
+            HandType::ThreeOfAKind
+        } else if self.is_two_pair_j() {
+            HandType::TwoPair
+        } else if self.is_pair_j() {
             HandType::Pair
         } else {
             HandType::HighCard
@@ -126,34 +157,62 @@ impl Cards {
         self.get_counts().into_iter().filter(|c| c == &2).count() == 1
     }
 
+    fn is_five_of_a_kind_j(&self) -> bool {
+        let joker_count = self.get_joker_count();
+        joker_count == 5 || self.get_counts().contains(&(5 - self.get_joker_count()))
+    }
+
+    fn is_four_of_a_kind_j(&self) -> bool {
+        let joker_count = self.get_joker_count();
+        self.get_counts().contains(&(4 - self.get_joker_count()))
+            && !(self.is_pair() && joker_count == 2)
+    }
+
+    fn is_full_house_j(&self) -> bool {
+        (self.is_two_pair() && self.0.contains(&Card::JACK)) | self.is_full_house()
+    }
+
+    fn is_three_of_a_kind_j(&self) -> bool {
+        self.get_counts().contains(&(3 - self.get_joker_count()))
+    }
+
+    fn is_two_pair_j(&self) -> bool {
+        self.get_counts().into_iter().filter(|c| c == &2).count() == 2
+    }
+
+    fn is_pair_j(&self) -> bool {
+        self.0.contains(&Card::JACK) | self.is_pair()
+    }
+
+    fn get_joker_count(&self) -> usize {
+        self.0
+            .iter()
+            .counts_by(identity)
+            .get(&Card::JACK)
+            .map(|v| *v)
+            .unwrap_or(0)
+    }
+
     fn get_counts(&self) -> Vec<usize> {
         self.0.iter().counts_by(identity).into_values().collect()
     }
 }
 
+#[derive(Clone)]
 struct Hand {
-    hand_type: HandType,
     cards: Cards,
     bid: u32,
 }
-impl Eq for Hand {}
-impl PartialEq for Hand {
-    fn eq(&self, other: &Self) -> bool {
-        self.partial_cmp(other)
-            .is_some_and(|o| o == Ordering::Equal)
-    }
-}
-impl PartialOrd for Hand {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Hand {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.hand_type
-            .cmp(&other.hand_type)
-            .then(self.cards.cmp(&other.cards))
+impl Hand {
+    fn cmp(
+        &self,
+        other: &Self,
+        card_cmp: impl Fn(&Card, &Card) -> Ordering,
+        hand_type_fn: impl Fn(&Cards) -> HandType,
+    ) -> Ordering {
+        hand_type_fn(&self.cards)
+            .cmp(&hand_type_fn(&other.cards))
+            .then(self.cards.cmp(&other.cards, card_cmp))
     }
 }
 
@@ -161,17 +220,37 @@ fn main() -> std::io::Result<()> {
     let input = read_input(Day::DAY7)?;
 
     println!("Part 1: {}", part1(&input));
-    // part2(&input);
+    println!("Part 2: {}", part2(&input));
 
     Ok(())
 }
 
 fn part1(input: &str) -> u32 {
-    parse_hands(&input)
+    compute_rank_product_sum(input, |h1, h2| {
+        h1.cmp(
+            h2,
+            |c1, c2| c1.cmp_part1(c2),
+            Cards::compute_hand_type_part1,
+        )
+    })
+}
+
+fn part2(input: &str) -> u32 {
+    compute_rank_product_sum(input, |h1, h2| {
+        h1.cmp(
+            h2,
+            |c1, c2| c1.cmp_part2(c2),
+            Cards::compute_hand_type_part2,
+        )
+    })
+}
+
+fn compute_rank_product_sum(input: &str, cmp: impl Fn(&Hand, &Hand) -> Ordering) -> u32 {
+    parse_hands(input)
         .into_iter()
-        .sorted()
-        .enumerate()
-        .map(|(i, hand)| hand.bid * (i as u32 + 1))
+        .sorted_by(cmp)
+        .zip(0u32..)
+        .map(|(hand, i)| hand.bid * (i + 1))
         .sum()
 }
 
@@ -188,24 +267,15 @@ fn parse_hands(input: &str) -> Vec<Hand> {
 fn parse_hand(raw_hand: &str, raw_bid: &str) -> Hand {
     let cards = Cards::from_str(raw_hand).unwrap();
     let bid = raw_bid.parse().unwrap();
-    let hand_type = cards.compute_hand_type();
 
-    Hand {
-        hand_type,
-        cards,
-        bid,
-    }
-}
-
-fn part2(input: &str) -> u32 {
-    todo!()
+    Hand { cards, bid }
 }
 
 #[cfg(test)]
 mod tests {
     use std::{cmp::Ordering, str::FromStr};
 
-    use crate::{part1, Cards};
+    use crate::{part1, part2, Card, Cards, HandType};
 
     #[test]
     fn test_example() {
@@ -218,14 +288,37 @@ mod tests {
         "#
         .trim();
 
-        assert_eq!(6440, part1(&input))
+        assert_eq!(6440, part1(&input));
+        assert_eq!(5905, part2(&input));
     }
 
     #[test]
-    fn test_cards() {
-        let c1 = Cards::from_str("77888").unwrap();
-        let c2 = Cards::from_str("77788").unwrap();
+    fn test_cards_part1() {
+        let cs1 = Cards::from_str("77888").unwrap();
+        let cs2 = Cards::from_str("77788").unwrap();
 
-        assert_eq!(Ordering::Greater, c1.cmp(&c2));
+        assert_eq!(Ordering::Greater, cs1.cmp(&cs2, |c1, c2| c1.cmp_part1(c2)));
+    }
+
+    #[test]
+    fn test_hand_types_part2() {
+        let cs1 = Cards::from_str("2233J").unwrap();
+        let cs2 = Cards::from_str("2333J").unwrap();
+        let cs3 = Cards::from_str("22JJ3").unwrap();
+        let cs4 = Cards::from_str("JJJJJ").unwrap();
+        let cs5 = Cards::from_str("JJ234").unwrap();
+
+        assert_eq!(HandType::FullHouse, cs1.compute_hand_type_part2());
+        assert_eq!(HandType::FourOfAKind, cs2.compute_hand_type_part2());
+        assert_eq!(HandType::FourOfAKind, cs3.compute_hand_type_part2());
+        assert_eq!(HandType::FiveOfAKind, cs4.compute_hand_type_part2());
+        assert_eq!(HandType::ThreeOfAKind, cs5.compute_hand_type_part2());
+    }
+
+    #[test]
+    fn test_joker_rank() {
+        assert_eq!(Ordering::Equal, Card::JACK.cmp_part2(&Card::JACK));
+        assert_eq!(Ordering::Greater, Card::TWO.cmp_part2(&Card::JACK));
+        assert_eq!(Ordering::Less, Card::JACK.cmp_part2(&Card::TWO));
     }
 }
