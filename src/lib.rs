@@ -7,7 +7,8 @@ use strum::{EnumString, Display};
 pub enum Day {
     DAY1,
     DAY2,
-    DAY3
+    DAY3,
+    DAY9,
 }
 
 pub fn read_input(day: Day) -> std::io::Result<String> {
