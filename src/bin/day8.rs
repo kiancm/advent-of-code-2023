@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, collections::HashMap, iter::repeat_with, str::FromStr};
+use std::{collections::HashMap, iter::repeat_with, str::FromStr};
 
 use advent_of_code_2023::{read_input, Day};
 use itertools::Itertools;
@@ -19,23 +19,27 @@ fn main() -> std::io::Result<()> {
     let input = read_input(Day::DAY8)?;
 
     println!("Part 1: {:?}", part1(&input));
-    println!("Part 2: {:?}", part2(&input));
+    println!("Part 2: {}", part2(&input));
 
     Ok(())
 }
 
-fn part1(input: &str) -> Option<u32> {
+fn part1(input: &str) -> Option<u64> {
     let instructions = parse_instructions(input);
     let map = parse_map(input);
-    let instructions = repeat_with(|| &instructions).into_iter().flatten();
-    let mut key = START_KEY;
-    for (i, ins) in (1u32..).zip(instructions) {
+    get_path_length(START_KEY, &instructions, &map, |key| key == END_KEY)
+}
+
+fn get_path_length(start_key: &str, instructions: &Vec<Instruction>, map: &HashMap<&str, (&str, &str)>, predicate: impl Fn(&str) -> bool) -> Option<u64> {
+    let instructions = repeat_with(|| instructions).into_iter().flatten();
+    let mut key = start_key;
+    for (i, ins) in (1u64..).zip(instructions) {
         let next = match ins {
             Instruction::LEFT => map.get(key).unwrap().0,
             Instruction::RIGHT => map.get(key).unwrap().1,
         };
-        if next == END_KEY {
-            return Some(i)
+        if predicate(next) {
+            return Some(i);
         } else {
             key = next
         }
@@ -43,23 +47,22 @@ fn part1(input: &str) -> Option<u32> {
     None
 }
 
-fn part2(input: &str) -> Option<u32> {
+fn part2(input: &str) -> u64 {
     let instructions = parse_instructions(input);
     let map = parse_map(input);
-    let instructions = repeat_with(|| &instructions).into_iter().flatten();
-    let mut keys = map.keys().into_iter().filter(|key| key.ends_with("A")).map(|key| key.to_owned()).collect_vec();
-    for (i, ins) in (1u32..).zip(instructions) {
-        let nexts = keys.into_iter().map(|key| match ins {
-            Instruction::LEFT => map.get(key).unwrap().0,
-            Instruction::RIGHT => map.get(key).unwrap().1,
-        });
-        if nexts.clone().all(|n| n.ends_with("Z")) {
-            return Some(i)
-        } else {
-            keys = nexts.collect_vec()
-        }
-    }
-    None
+    let keys = map
+        .keys()
+        .cloned()
+        .filter(|key| key.ends_with("A"))
+        .collect_vec();
+    keys
+    .iter()
+    .map(|key| get_path_length(key, &instructions, &map, |key| key.ends_with("Z")).unwrap())
+    .fold(1, |a, b| lcm(a, b))
+}
+
+fn lcm(a: u64, b: u64) -> u64 {
+    a * b / gcd::euclid_u64(a, b)
 }
 
 fn parse_instructions(input: &str) -> Vec<Instruction> {
@@ -88,19 +91,38 @@ fn parse_map_entry(line: &str) -> (&str, (&str, &str)) {
 
 #[cfg(test)]
 mod tests {
-    use crate::part1;
-
+    use crate::{part1, part2};
 
     #[test]
-    fn test_example() {
+    fn test_example1() {
         let input = r#"
             LLR
 
             AAA = (BBB, BBB)
             BBB = (AAA, ZZZ)
             ZZZ = (ZZZ, ZZZ)
-        "#.trim();
+        "#
+        .trim();
 
         assert_eq!(Some(6), part1(input));
+    }
+
+    #[test]
+    fn test_example2() {
+        let input = r#"
+            LR
+
+            11A = (11B, XXX)
+            11B = (XXX, 11Z)
+            11Z = (11B, XXX)
+            22A = (22B, XXX)
+            22B = (22C, 22C)
+            22C = (22Z, 22Z)
+            22Z = (22B, 22B)
+            XXX = (XXX, XXX)
+        "#
+        .trim();
+
+        assert_eq!(6, part2(input));
     }
 }
