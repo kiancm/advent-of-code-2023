@@ -1,6 +1,6 @@
-use std::{path::PathBuf, fs};
+use std::{fs, path::PathBuf};
 
-use strum::{EnumString, Display};
+use strum::{Display, EnumString};
 
 #[derive(EnumString, Display)]
 #[strum(serialize_all = "snake_case")]
@@ -12,6 +12,7 @@ pub enum Day {
     DAY5,
     DAY6,
     DAY7,
+    DAY8,
 }
 
 pub fn read_input(day: Day) -> std::io::Result<String> {
